@@ -32,7 +32,7 @@ function supportsMrsFormat(userAgent) {
     if (ua.includes('merlin') ||
         ua.includes('clashforwindows') ||
         ua.includes('clashforandroid') ||
-        ua.includes('clash/')) {         // 鑰佺増鏈珻lash鏍稿績 (Clash/v1.x.x)
+        ua.includes('clash/')) {         // Legacy Clash core (Clash/v1.x.x)
         return false;
     }
     
@@ -649,7 +649,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         });
     }
 
-    // 鐢熸垚瑙勫垯
+    // Generate rules
     generateRules() {
         return generateRules(this.selectedRules, this.customRules);
     }
