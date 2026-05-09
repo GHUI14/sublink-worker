@@ -32,7 +32,7 @@ function supportsMrsFormat(userAgent) {
     if (ua.includes('merlin') ||
         ua.includes('clashforwindows') ||
         ua.includes('clashforandroid') ||
-        ua.includes('clash/')) {         // 老版本Clash核心 (Clash/v1.x.x)
+        ua.includes('clash/')) {         // 鑰佺増鏈珻lash鏍稿績 (Clash/v1.x.x)
         return false;
     }
     
@@ -60,6 +60,18 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.enableClashUI = enableClashUI;
         this.externalController = externalController;
         this.externalUiDownloadUrl = externalUiDownloadUrl;
+    }
+
+    getOutboundsList() {
+        if (typeof this.selectedRules === 'string' && PREDEFINED_RULE_SETS[this.selectedRules]) {
+            return getOutbounds(PREDEFINED_RULE_SETS[this.selectedRules]);
+        }
+
+        if (Array.isArray(this.selectedRules)) {
+            return getOutbounds(this.selectedRules);
+        }
+
+        return [];
     }
 
     /**
@@ -637,7 +649,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         });
     }
 
-    // 生成规则
+    // 鐢熸垚瑙勫垯
     generateRules() {
         return generateRules(this.selectedRules, this.customRules);
     }
