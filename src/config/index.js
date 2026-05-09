@@ -34,6 +34,12 @@ export {
 	generateClashRuleSets
 } from './ruleGenerators.js';
 
+export {
+	LOYALSOLDIER_CLASH_RULE_PROVIDERS,
+	generateLoyalsoldierClashRuleProviders,
+	generateLoyalsoldierClashRules
+} from './loyalsoldierClashRules.js';
+
 // Subconverter Config
 export { generateSubconverterConfig } from './subconverterConfig.js';
 

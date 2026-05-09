@@ -115,5 +115,7 @@ ss://YWVzLTEyOC1nY206dGVzdA@example.com:444#US-Node-1
     const fallbackGroup = (built['proxy-groups'] || []).find(g => g && g.name === fallbackName);
     expect(fallbackGroup).toBeDefined();
     expect(fallbackGroup.proxies[0]).not.toBe('DIRECT');
+    expect(built.rules).toContain('RULE-SET,private,DIRECT');
+    expect(built.rules).toContain('RULE-SET,cncidr,DIRECT');
   });
 });

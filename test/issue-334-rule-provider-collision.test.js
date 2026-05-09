@@ -7,61 +7,48 @@ ss://YWVzLTEyOC1nY206dGVzdA@example.com:443#HK-Node-1
 ss://YWVzLTEyOC1nY206dGVzdA@example.com:444#US-Node-1
 `;
 
-describe('Issue #334: rule-provider key collision fix', () => {
-  it('google site provider should not be overwritten by ip provider', async () => {
+describe('Clash fixed Loyalsoldier provider set', () => {
+  it('should include domain, ipcidr, and classical providers from Loyalsoldier only', async () => {
     const builder = new ClashConfigBuilder(SS_INPUT, 'balanced', [], null, 'zh-CN', 'mihomo/1.0');
     const yamlText = await builder.build();
     const config = yaml.load(yamlText);
     const providers = config['rule-providers'];
 
-    // google (site) should be domain behavior
-    expect(providers.google).toBeDefined();
     expect(providers.google.behavior).toBe('domain');
-    expect(providers.google.url).toContain('geosite');
+    expect(providers.telegramcidr.behavior).toBe('ipcidr');
+    expect(providers.applications.behavior).toBe('classical');
 
-    // google-ip should exist separately
-    expect(providers['google-ip']).toBeDefined();
-    expect(providers['google-ip'].behavior).toBe('ipcidr');
-    expect(providers['google-ip'].url).toContain('geoip');
+    Object.values(providers).forEach(provider => {
+      expect(provider.url).toContain('Loyalsoldier/clash-rules@release');
+      expect(provider.url).not.toContain('MetaCubeX');
+    });
   });
 
-  it('cn site provider should not be overwritten by ip provider', async () => {
+  it('should not generate MetaCubeX rule-provider keys from selected rules', async () => {
     const builder = new ClashConfigBuilder(SS_INPUT, 'balanced', [], null, 'zh-CN', 'mihomo/1.0');
     const yamlText = await builder.build();
     const config = yaml.load(yamlText);
     const providers = config['rule-providers'];
 
-    // cn (site) should be domain behavior
-    expect(providers.cn).toBeDefined();
-    expect(providers.cn.behavior).toBe('domain');
-
-    // cn-ip should exist separately
-    expect(providers['cn-ip']).toBeDefined();
-    expect(providers['cn-ip'].behavior).toBe('ipcidr');
+    expect(providers['google-ip']).toBeUndefined();
+    expect(providers.cn).toBeUndefined();
+    expect(providers['cn-ip']).toBeUndefined();
+    expect(providers['geolocation-!cn']).toBeUndefined();
+    expect(yamlText).not.toContain('MetaCubeX');
+    expect(yamlText).not.toContain('geosite:');
   });
 
-  it('rules should reference correct provider keys', async () => {
-    const builder = new ClashConfigBuilder(SS_INPUT, 'balanced', [], null, 'zh-CN', 'mihomo/1.0');
+  it('rules should follow Loyalsoldier whitelist order and route proxy rules to the proxy policy', async () => {
+    const builder = new ClashConfigBuilder(SS_INPUT, [], [], null, 'zh-CN', 'mihomo/1.0');
     const yamlText = await builder.build();
     const config = yaml.load(yamlText);
+    const proxyPolicy = config.rules.at(-1).split(',')[1];
 
-    // Site rules use plain key
-    expect(config.rules).toContainEqual(expect.stringMatching(/^RULE-SET,google,.*谷歌/));
-    // IP rules use -ip suffixed key
-    expect(config.rules).toContainEqual(expect.stringMatching(/^RULE-SET,google-ip,.*谷歌.*no-resolve/));
-    // Non-China should still work
-    expect(config.rules).toContainEqual(expect.stringMatching(/^RULE-SET,geolocation-!cn,.*非中国/));
-  });
-
-  it('google domain rule should come before non-china rule', async () => {
-    const builder = new ClashConfigBuilder(SS_INPUT, 'balanced', [], null, 'zh-CN', 'mihomo/1.0');
-    const yamlText = await builder.build();
-    const config = yaml.load(yamlText);
-
-    const googleIdx = config.rules.findIndex(r => r.match(/^RULE-SET,google,/));
-    const nonChinaIdx = config.rules.findIndex(r => r.includes('geolocation-!cn'));
-    expect(googleIdx).toBeGreaterThan(-1);
-    expect(nonChinaIdx).toBeGreaterThan(-1);
-    expect(googleIdx).toBeLessThan(nonChinaIdx);
+    expect(config.rules[0]).toBe('RULE-SET,applications,DIRECT');
+    expect(config.rules).toContain(`RULE-SET,google,${proxyPolicy}`);
+    expect(config.rules).toContain(`RULE-SET,proxy,${proxyPolicy}`);
+    expect(config.rules).toContain('RULE-SET,lancidr,DIRECT');
+    expect(config.rules).toContain('RULE-SET,cncidr,DIRECT');
+    expect(config.rules.at(-1)).toBe(`MATCH,${proxyPolicy}`);
   });
 });

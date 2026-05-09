@@ -1,6 +1,16 @@
-export function emitClashRules(rules = [], translator) {
+import { generateLoyalsoldierClashRules } from '../../config/loyalsoldierClashRules.js';
+
+export function emitClashRules(_rules = [], translator) {
     if (!translator) {
         throw new Error('emitClashRules requires a translator function');
+    }
+    return generateLoyalsoldierClashRules(translator('outboundNames.Fall Back'))
+        .filter(rule => !rule.startsWith('MATCH,'));
+}
+
+export function emitLegacyClashRules(rules = [], translator) {
+    if (!translator) {
+        throw new Error('emitLegacyClashRules requires a translator function');
     }
     const results = [];
 

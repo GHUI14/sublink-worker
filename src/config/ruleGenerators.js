@@ -3,8 +3,9 @@
  * Functions for generating rules and rule sets
  */
 
-import { UNIFIED_RULES, PREDEFINED_RULE_SETS, SITE_RULE_SETS, IP_RULE_SETS, CLASH_SITE_RULE_SETS, CLASH_IP_RULE_SETS } from './rules.js';
-import { SITE_RULE_SET_BASE_URL, IP_RULE_SET_BASE_URL, CLASH_SITE_RULE_SET_BASE_URL, CLASH_IP_RULE_SET_BASE_URL } from './ruleUrls.js';
+import { UNIFIED_RULES, PREDEFINED_RULE_SETS, SITE_RULE_SETS, IP_RULE_SETS } from './rules.js';
+import { SITE_RULE_SET_BASE_URL, IP_RULE_SET_BASE_URL } from './ruleUrls.js';
+import { generateLoyalsoldierClashRuleProviders } from './loyalsoldierClashRules.js';
 
 function toStringArray(value) {
 	if (Array.isArray(value)) {
@@ -141,94 +142,18 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
 	return { site_rule_sets, ip_rule_sets };
 }
 
-// Generate rule sets for Clash using .mrs format
-export function generateClashRuleSets(selectedRules = [], customRules = [], useMrs = true) {
-	if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
-		selectedRules = PREDEFINED_RULE_SETS[selectedRules];
-	}
-
-	if (!selectedRules || selectedRules.length === 0) {
-		selectedRules = PREDEFINED_RULE_SETS.minimal;
-	}
-
-	// Determine format based on client compatibility
-	const format = useMrs ? 'mrs' : 'yaml';
-	const ext = useMrs ? '.mrs' : '.yaml';
-
-	const selectedRulesSet = new Set(selectedRules);
-
-	const siteRuleSets = new Set();
-	const ipRuleSets = new Set();
-
-	UNIFIED_RULES.forEach(rule => {
-		if (selectedRulesSet.has(rule.name)) {
-			rule.site_rules.forEach(siteRule => siteRuleSets.add(siteRule));
-			rule.ip_rules.forEach(ipRule => ipRuleSets.add(ipRule));
-		}
-	});
-
+// Clash subscriptions use the fixed Loyalsoldier provider set.
+export function generateClashRuleSets() {
 	const site_rule_providers = {};
 	const ip_rule_providers = {};
 
-	Array.from(siteRuleSets).forEach(rule => {
-		site_rule_providers[rule] = {
-			type: 'http',
-			format: format,
-			behavior: 'domain',
-			url: `${CLASH_SITE_RULE_SET_BASE_URL}${rule}${ext}`,
-			path: `./ruleset/${rule}${ext}`,
-			interval: 86400
-		};
+	Object.entries(generateLoyalsoldierClashRuleProviders()).forEach(([name, provider]) => {
+		if (provider.behavior === 'ipcidr') {
+			ip_rule_providers[name] = provider;
+		} else {
+			site_rule_providers[name] = provider;
+		}
 	});
-
-	Array.from(ipRuleSets).forEach(rule => {
-		ip_rule_providers[`${rule}-ip`] = {
-			type: 'http',
-			format: format,
-			behavior: 'ipcidr',
-			url: `${CLASH_IP_RULE_SET_BASE_URL}${rule}${ext}`,
-			path: `./ruleset/${rule}-ip${ext}`,
-			interval: 86400
-		};
-	});
-
-	// Add Non-China rule set if not included
-	if (!selectedRules.includes('Non-China')) {
-		site_rule_providers['geolocation-!cn'] = {
-			type: 'http',
-			format: format,
-			behavior: 'domain',
-			url: `${CLASH_SITE_RULE_SET_BASE_URL}geolocation-!cn${ext}`,
-			path: `./ruleset/geolocation-!cn${ext}`,
-			interval: 86400
-		};
-	}
-
-	// Add custom rules
-	if (customRules) {
-		customRules.forEach(rule => {
-			toStringArray(rule.site).forEach(site => {
-				site_rule_providers[site] = {
-					type: 'http',
-					format: format,
-					behavior: 'domain',
-					url: `${CLASH_SITE_RULE_SET_BASE_URL}${site}${ext}`,
-					path: `./ruleset/${site}${ext}`,
-					interval: 86400
-				};
-			});
-			toStringArray(rule.ip).forEach(ip => {
-				ip_rule_providers[`${ip}-ip`] = {
-					type: 'http',
-					format: format,
-					behavior: 'ipcidr',
-					url: `${CLASH_IP_RULE_SET_BASE_URL}${ip}${ext}`,
-					path: `./ruleset/${ip}-ip${ext}`,
-					interval: 86400
-				};
-			});
-		});
-	}
 
 	return { site_rule_providers, ip_rule_providers };
 }
